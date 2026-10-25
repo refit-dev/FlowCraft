@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import Stripe from 'stripe'
 import { trackServer } from '@/lib/analytics-server'
+import { getSubscriptionPeriodEnd, getInvoiceSubscription } from '../../stripeSubscriptionPeriod';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
 
         if (subscription.cancel_at_period_end) {
           updateData.date_cancelled = new Date(
-            subscription.current_period_end * 1000,
+            (getSubscriptionPeriodEnd(subscription)) * 1000,
           ).toISOString()
         } else {
           updateData.date_cancelled = null
@@ -121,10 +122,11 @@ export async function POST(request: NextRequest) {
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
+        const invoiceSubscription = getInvoiceSubscription(invoice)
         const subscriptionId =
-          typeof invoice.subscription === 'string'
-            ? invoice.subscription
-            : invoice.subscription?.id
+          typeof invoiceSubscription === 'string'
+            ? invoiceSubscription
+            : invoiceSubscription?.id
 
         if (subscriptionId) {
           console.warn(

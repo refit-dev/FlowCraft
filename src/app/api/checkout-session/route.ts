@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const base_url = isLocal ? 'http://localhost:3000' : 'https://flowcraft.app'
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      allowed_payment_method_types: ['card'],
       customer_email: userData.user.email ?? undefined,
       line_items: [
         {
