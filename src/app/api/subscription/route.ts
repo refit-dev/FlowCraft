@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-auth/server'
 import stripe from '@/lib/stripe'
 import { NextRequest } from 'next/server'
 import type Stripe from 'stripe'
+import { getSubscriptionPeriodEnd } from '../stripeSubscriptionPeriod';
 
 /**
  * GET endpoint to fetch current subscription details
@@ -143,7 +144,7 @@ export async function GET() {
           subscription: {
             id: subscription.id,
             status: subscription.status,
-            current_period_end: subscription.current_period_end,
+            current_period_end: (getSubscriptionPeriodEnd(subscription, (items) => items[0])),
             cancel_at_period_end: subscription.cancel_at_period_end,
             plan: price?.id,
             planName,
@@ -248,7 +249,7 @@ export async function POST(request: NextRequest) {
           .from('users')
           .update({
             date_cancelled: new Date(
-              subscription.current_period_end * 1000,
+              (getSubscriptionPeriodEnd(subscription, (items) => items[0])) * 1000,
             ).toISOString(),
           })
           .eq('user_id', userData.user.id)
@@ -257,7 +258,7 @@ export async function POST(request: NextRequest) {
           JSON.stringify({
             success: true,
             message: 'Subscription will be cancelled at period end',
-            cancel_at: new Date(subscription.current_period_end * 1000),
+            cancel_at: new Date((getSubscriptionPeriodEnd(subscription, (items) => items[0])) * 1000),
           }),
           {
             status: 200,
